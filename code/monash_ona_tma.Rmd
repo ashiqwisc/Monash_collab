@@ -1,0 +1,110 @@
+---
+title: "Multimodal ONA Model for Monash University"
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r, setup, include=FALSE, echo=FALSE}
+# Set local working directory
+setwd("~/Desktop/epistemic_analytics/Monash_collab")
+```
+
+# 0. Initialize dependencies 
+```{r, echo = FALSE, message = FALSE}
+# Reinstallation sequence for ONA package
+# remove.packages("ona")
+# install.packages("ona", repos = c("https://epistemic-analytics.gitlab.io/qe-packages/ona/cran/", "https://cran.rstudio.org"))
+
+# Load necessary libraries 
+library(rENA)
+library(ona) 
+library(tma)
+library(readxl)
+library(tidyverse)
+# Source plotter code
+# source("~/Desktop/epistemic_analytics/Monash_collab/code/ona_plotter_monash.R")
+```
+
+# 1. Read in and process dataset
+```{r, message = FALSE}
+df <- read_excel("~/Desktop/epistemic_analytics/Monash_collab/data/merged_A_15_individual_7codes_1s.xlsx")
+```
+
+# 2. Specify parameters: Units, codes, metadata, and Horizon-of-observation rules
+```{r}
+# Specify unit columns 
+unit_cols <- c("session_id", "initiator") 
+
+# Cumulative code columns. Can split these up into location-based and utterance-based. Will be differently grouped after encoding modalities
+code_cols <- c("CP", "CS", "IP", "IS", "TD", "TT", "task allo and plann", "provision of handover information", "responding to request", "agreement", "comparison")
+
+# Store metadata (duration will  leave this later once we compare active and continuing impacts) 
+meta_cols <- c("..1", "Unamed: 0", "utterance_id", "conversation_id", "text", "duration", "receiver", "location", "priority", "communication_type", "stage_based_on_num_of_student", "stage_based_on_scenario")
+  
+# Establish HOO rules. Units are making connections only in their respective sessions 
+HOO_rules_model <-  tma:::rules(
+    session_id %in% UNIT$session_id 
+)
+```
+
+## 3. Define contexts based on HOO rules
+```{r}
+context_model <- tma:::contexts(
+  x = df,
+  units = unit_cols,
+  hoo_rules = HOO_rules_model
+)
+```
+
+# 4. Build ONA multimodal model 
+```{r}
+# Define accumulation function
+ona_multimodal_tif_accum <- tma:::accumulate_contexts (
+    x = context_model,
+    codes = code_cols,
+    weight.by = function(x) { x },
+    # Define the decay function to account differently for location and dialogue--arbitrary values that assume location is more continually impacting and dialogue is more actively impacting 
+    decay.function = function(x) {
+      mod <- FULL_CONTEXT[RESPONSE_INDEX, ]$modality
+      if(mod == "location")
+        return(x<=20)*1
+      if(mod == "dialogue")
+        return(x<=10)*1
+      else
+        return(0)
+      },
+    time.column = "start_time", 
+    return.ena.set = FALSE,
+    mode.column = "modality"
+) 
+# Make ONA set
+ona_multimodal_tif_set <- model(ona_multimodal_tif_accum)
+```
+
+
+# 5. Analyze model 
+## 1) Goodness of fit
+```{r}
+# Pearson's R
+ona_multimodal_tif_gof <- ona:::correlations(ona_multimodal_tif_set)$pearson
+ona_multimodal_tif_gof[[1]]
+```
+## 2) Variance explained
+SVD1
+```{r}
+# Variance explained by SVD1 pertaining to each session ID
+ona_multimodal_tif_svd1 <- lm(ona_multimodal_tif_set$points$SVD1 ~ ona_multimodal_tif_set$points$session_id) %>% summary()
+ona_multimodal_tif_svd1$r.squared
+```
+## 3) Interpretive Alignment
+```{r}
+source("~/Desktop/epistemic_analytics/Monash_collab/code/ona_plotter_monash.R")
+# Plot ONA plot
+make.ona.plot(ona_multimodal_tif_set, 
+              "Monash Analysis")
+```
+
+
