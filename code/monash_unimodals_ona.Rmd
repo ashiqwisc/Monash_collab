@@ -1,0 +1,112 @@
+---
+title: "Unimodal ONA Models (location, dialogue) for Monash University"
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  chunk_output_type: inline
+---
+```{r, setup, include=FALSE, echo=FALSE}
+# Set local working directory
+setwd("~/Desktop/epistemic_analytics/Monash_collab")
+```
+# 0. Initialize dependencies 
+```{r, echo = FALSE, message = FALSE}
+# Reinstallation sequence for ONA package
+# remove.packages("ona")
+# install.packages("ona", repos = c("https://epistemic-analytics.gitlab.io/qe-packages/ona/cran/", "https://cran.rstudio.org"))
+
+# Load necessary libraries 
+library(rENA)
+library(ona) 
+library(tma)
+library(readxl)
+library(tidyverse)
+# Source plotter code
+# source("~/Desktop/epistemic_analytics/Monash_collab/code/ona_plotter_monash.R")
+```
+
+# 1. Read in and process dataset
+```{r, message = FALSE}
+df_location <- read_excel("~/Desktop/epistemic_analytics/Monash_collab/data/merged_A_15_individual_7codes_1s.xlsx") %>%
+  filter(modality == "location")
+df_dialogue <- read_excel("~/Desktop/epistemic_analytics/Monash_collab/data/merged_A_15_individual_7codes_1s.xlsx") %>%
+  filter(modality == "dialogue")
+```
+
+# 2. Specify parameters: Units, codes, metadata, and Horizon-of-observation rules
+```{r}
+# Specify unit columns 
+unit_cols <- c("session_id", "initiator") 
+
+# Cumulative code columns. Can split these up into location-based and utterance-based. Will be differently grouped after encoding modalities
+code_cols <- c("CP", "CS", "IP", "IS", "TD", "TT", "task allo and plann", "provision of handover information", "responding to request", "agreement", "comparison")
+
+# Store metadata (duration will  leave this later once we compare active and continuing impacts) 
+meta_cols <- c("..1", "Unamed: 0", "utterance_id", "conversation_id", "text", "duration", "receiver", "location", "priority", "communication_type", "stage_based_on_num_of_student", "stage_based_on_scenario")
+  
+# Establish HOO rules. Units are making connections only in their respective sessions 
+HOO_rules_model <-  tma:::rules(
+    session_id %in% UNIT$session_id 
+)
+```
+
+# 2. Accumulate 
+```{r}
+# Accumulate by passing along the subset dataframes. Specifying  an arbitrary moving stanza window of 7
+accum_location <-
+  contexts(df_location, units_by = unit_cols, hoo_rules = HOO_rules_model) %>%
+  accumulate_contexts(codes = code_cols, 
+                      decay.function = decay(simple_window, window_size = 7),
+                      return.ena.set = FALSE, norm.by = NULL)
+accum_dialogue <-
+  contexts(df_dialogue, units_by = unit_cols, hoo_rules = HOO_rules_model) %>%
+  accumulate_contexts(codes = code_cols, 
+                      decay.function = decay(simple_window, window_size = 7),
+                      return.ena.set = FALSE, norm.by = NULL)
+```
+
+# 3. Generate the ONA Set
+
+## 3.1 Perform SVD 
+```{r}
+## Not performing means rotation, there aren't two discrete groups involved in the respective accumulations
+ona_location_set <- 
+  model(accum_location)
+ona_dialogue_set <- 
+  model(accum_dialogue)
+```
+
+# 4. Analyze Model
+
+## 1) Goodness of fit
+```{r}
+# Pearson's R
+ona_location_gof <- ona:::correlations(ona_location_set)$pearson
+ona_location_gof[[1]]
+ona_dialogue_gof <- ona:::correlations(ona_dialogue_set)$pearson
+ona_dialogue_gof[[1]]
+```
+## 2) Variance explained
+SVD1
+```{r}
+# Variance explained by SVD1 pertaining to each session ID
+ona_location_svd1 <- lm(ona_location_set$points$SVD1 ~ ona_location_set$points$session_id) %>% summary()
+ona_location_svd1$r.squared
+ona_dialogue_svd1 <- lm(ona_dialogue_set$points$SVD1 ~ ona_dialogue_set$points$session_id) %>% summary()
+ona_dialogue_svd1$r.squared
+```
+## 3) Interpretive Alignment
+```{r}
+source("~/Desktop/epistemic_analytics/Monash_collab/code/ona_plotter_monash.R")
+# Plot ONA plots
+make.ona.plot(ona_location_set, 
+              "Monash Location Model")
+make.ona.plot(ona_dialogue_set, 
+              "Monash Dialogue Model")
+```
+
+
+
+
+

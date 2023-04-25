@@ -109,7 +109,7 @@ ona_multimodal_tif_svd1$r.squared
 source("code/ona_plotter_monash.R")
 # Plot ONA plot
 make.ona.plot(ona_multimodal_tif_set, 
-              "Monash Analysis")
+              "Monash Multimodal Model")
 ```
 
 
