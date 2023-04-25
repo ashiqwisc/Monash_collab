@@ -9,7 +9,10 @@ editor_options:
 
 ```{r, setup, include=FALSE, echo=FALSE}
 # Set local working directory
-setwd("~/Desktop/epistemic_analytics/Monash_collab")
+# setwd("~/Desktop/epistemic_analytics/Monash_collab")
+```
+```{r, setup, include=FALSE, echo=FALSE}
+knitr::opts_knit$set(root.dir = '~/Documents/GitHub/Monash_collab')
 ```
 
 # 0. Initialize dependencies 
@@ -30,7 +33,7 @@ library(tidyverse)
 
 # 1. Read in and process dataset
 ```{r, message = FALSE}
-df <- read_excel("~/Desktop/epistemic_analytics/Monash_collab/data/merged_A_15_individual_7codes_1s.xlsx")
+df <- read_excel("data/merged_A_15_individual_7codes_1s.xlsx")
 ```
 
 # 2. Specify parameters: Units, codes, metadata, and Horizon-of-observation rules
@@ -70,9 +73,11 @@ ona_multimodal_tif_accum <- tma:::accumulate_contexts (
     decay.function = function(x) {
       mod <- FULL_CONTEXT[RESPONSE_INDEX, ]$modality
       if(mod == "location")
-        return(x<=20)*1
+        # return(x<=20)*1
+        return(x<(FULL_CONTEXT[ROWS]$end_time - FULL_CONTEXT[ROWS]$start_time +20))*1
       if(mod == "dialogue")
-        return(x<=10)*1
+        # return(x<=10)*1
+        return(x<(FULL_CONTEXT[ROWS]$end_time - FULL_CONTEXT[ROWS]$start_time +10))*1
       else
         return(0)
       },
@@ -101,7 +106,7 @@ ona_multimodal_tif_svd1$r.squared
 ```
 ## 3) Interpretive Alignment
 ```{r}
-source("~/Desktop/epistemic_analytics/Monash_collab/code/ona_plotter_monash.R")
+source("code/ona_plotter_monash.R")
 # Plot ONA plot
 make.ona.plot(ona_multimodal_tif_set, 
               "Monash Analysis")
