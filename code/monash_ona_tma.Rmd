@@ -33,7 +33,7 @@ library(tidyverse)
 
 # 1. Read in and process dataset
 ```{r, message = FALSE}
-df <- read_excel("data/merged_A_15_individual_7codes_1s.xlsx")
+df <- read_excel("~/Desktop/epistemic_analytics/Monash_collab/data/merged_A_15_individual_7codes_1s.xlsx")
 ```
 
 # 2. Specify parameters: Units, codes, metadata, and Horizon-of-observation rules
@@ -106,7 +106,7 @@ ona_multimodal_tif_svd1$r.squared
 ```
 ## 3) Interpretive Alignment
 ```{r}
-source("code/ona_plotter_monash.R")
+source("~/Desktop/epistemic_analytics/Monash_collab/code/ona_plotter_monash.R")
 # Plot ONA plot
 make.ona.plot(ona_multimodal_tif_set, 
               "Monash Multimodal Model")
