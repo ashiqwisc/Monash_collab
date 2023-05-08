@@ -8,13 +8,19 @@ editor_options:
 ---
 ```{r, setup, include=FALSE, echo=FALSE}
 # Set local working directory
-setwd("~/Desktop/epistemic_analytics/Monash_collab")
+# setwd("~/Desktop/epistemic_analytics/Monash_collab")
+```
+```{r, setup, include=FALSE, echo=FALSE}
+knitr::opts_knit$set(root.dir = '~/Documents/GitHub/Monash_collab')
 ```
 # 0. Initialize dependencies 
 ```{r, echo = FALSE, message = FALSE}
 # Reinstallation sequence for ONA package
 # remove.packages("ona")
-# install.packages("ona", repos = c("https://epistemic-analytics.gitlab.io/qe-packages/ona/cran/", "https://cran.rstudio.org"))
+# remove.packages("tma")
+# # install.packages("ona", repos = c("https://epistemic-analytics.gitlab.io/qe-packages/ona/cran/", "https://cran.rstudio.org"))
+# install.packages("~/Documents/GitHub/Monash_collab/ona_0.1.1.tar.gz", repos = NULL, type = "source")
+# install.packages("~/Documents/GitHub/Monash_collab/tma_0.1.2.tar.gz", repos = NULL, type = "source")
 
 # Load necessary libraries 
 library(rENA)
@@ -28,53 +34,96 @@ library(tidyverse)
 
 # 1. Read in and process dataset
 ```{r, message = FALSE}
-df_location <- read_excel("~/Desktop/epistemic_analytics/Monash_collab/data/merged_A_15_individual_7codes_1s.xlsx") %>%
-  filter(modality == "location")
-df_dialogue <- read_excel("~/Desktop/epistemic_analytics/Monash_collab/data/merged_A_15_individual_7codes_1s.xlsx") %>%
-  filter(modality == "dialogue")
+df_location <- read.csv("data/with_comparison.csv") %>%
+  filter(modality == "location") %>%
+  as.data.frame()
+
+df_dialogue <- read.csv("data/with_comparison.csv") %>%
+  filter(modality == "dialogue") %>%
+  as.data.frame()
 ```
 
 # 2. Specify parameters: Units, codes, metadata, and Horizon-of-observation rules
 ```{r}
 # Specify unit columns 
-unit_cols <- c("session_id", "initiator") 
+unit_cols <- c("session_id", "initiator", "comparison") 
 
 # Cumulative code columns. Can split these up into location-based and utterance-based. Will be differently grouped after encoding modalities
-code_cols <- c("CP", "CS", "IP", "IS", "TD", "TT", "task allo and plann", "provision of handover information", "responding to request", "agreement", "comparison")
+location_code_cols <- c("collaborate_primary", "independent_primary", "collaborate_secondary", "independent_secondary", "task_distribution", "task_transition")
+
+dialogue_code_cols <- c("task_allo_and_plann", "provision_of_handover_information","info_sharing_and_situ_assess", "escalation", "information_requesting", "responding_to_request", "agreement")
 
 # Store metadata (duration will  leave this later once we compare active and continuing impacts) 
-meta_cols <- c("..1", "Unamed: 0", "utterance_id", "conversation_id", "text", "duration", "receiver", "location", "priority", "communication_type", "stage_based_on_num_of_student", "stage_based_on_scenario")
+meta_cols <- c("session_id", "initiator", "comparison", "utterance_id", "conversation_id", "text", "duration", "receiver", "location", "priority", "communication_type", "stage_based_on_num_of_student", "stage_based_on_scenario")
   
 # Establish HOO rules. Units are making connections only in their respective sessions 
 HOO_rules_model <-  tma:::rules(
     session_id %in% UNIT$session_id 
 )
+context_model_location <- tma:::contexts(
+  x = df_location,
+  units = unit_cols,
+  hoo_rules = HOO_rules_model
+)
+context_model_dialogue <- tma:::contexts(
+  x = df_dialogue,
+  units = unit_cols,
+  hoo_rules = HOO_rules_model
+)
+
+my_rotation.params <-
+  list(low_perf=ona_multimodal_tif_accum$meta.data$comparison == "low",
+       high_perf=ona_multimodal_tif_accum$meta.data$comparison == "high")
 ```
 
 # 2. Accumulate 
 ```{r}
 # Accumulate by passing along the subset dataframes. Specifying  an arbitrary moving stanza window of 7
-accum_location <-
-  contexts(df_location, units_by = unit_cols, hoo_rules = HOO_rules_model) %>%
-  accumulate_contexts(codes = code_cols, 
-                      decay.function = decay(simple_window, window_size = 7),
-                      return.ena.set = FALSE, norm.by = NULL)
-accum_dialogue <-
-  contexts(df_dialogue, units_by = unit_cols, hoo_rules = HOO_rules_model) %>%
-  accumulate_contexts(codes = code_cols, 
-                      decay.function = decay(simple_window, window_size = 7),
-                      return.ena.set = FALSE, norm.by = NULL)
+accum_location <- tma:::accumulate_contexts (
+    x = context_model_location,
+    codes = location_code_cols,
+    weight.by = function(x) { x },
+    decay.function = function(x) {
+        return(x<(FULL_CONTEXT[ROWS]$end_time - FULL_CONTEXT[ROWS]$start_time + 20))*1
+      },
+    time.column = "start_time", 
+    return.ena.set = FALSE
+) 
+
+
+accum_dialogue <- tma:::accumulate_contexts (
+    x = context_model_dialogue,
+    codes = dialogue_code_cols,
+    weight.by = function(x) { x },
+    decay.function = function(x) {
+        return(x<(FULL_CONTEXT[ROWS]$end_time - FULL_CONTEXT[ROWS]$start_time + 10))*1
+      },
+    time.column = "start_time", 
+    return.ena.set = FALSE
+) 
 ```
 
 # 3. Generate the ONA Set
 
-## 3.1 Perform SVD 
+## 3.1 Perform MR 
 ```{r}
 ## Not performing means rotation, there aren't two discrete groups involved in the respective accumulations
-ona_location_set <- 
-  model(accum_location)
-ona_dialogue_set <- 
-  model(accum_dialogue)
+ona_location_set <-
+  model(accum_location,                                 # The previously run accumulation above
+        rotate.using ="mean",                  # Function provided by ONA
+        rotation.params = my_rotation.params   # The defined paremeters for rotation
+        )
+ona_dialogue_set <-
+  model(accum_dialogue,                                 # The previously run accumulation above
+        rotate.using ="mean",                  # Function provided by ONA
+        rotation.params = my_rotation.params   # The defined paremeters for rotation
+        )
+# ona_location_set <-
+#   model(accum_location
+#         )
+# ona_dialogue_set <-
+#   model(accum_dialogue
+#         )
 ```
 
 # 4. Analyze Model
@@ -91,22 +140,42 @@ ona_dialogue_gof[[1]]
 SVD1
 ```{r}
 # Variance explained by SVD1 pertaining to each session ID
-ona_location_svd1 <- lm(ona_location_set$points$SVD1 ~ ona_location_set$points$session_id) %>% summary()
-ona_location_svd1$r.squared
-ona_dialogue_svd1 <- lm(ona_dialogue_set$points$SVD1 ~ ona_dialogue_set$points$session_id) %>% summary()
-ona_dialogue_svd1$r.squared
+ona_location_mr <- lm(ona_location_set$points$MR1 ~ ona_location_set$points$comparison) %>% summary()
+ona_location_mr$r.squared
+ona_dialogue_mr <- lm(ona_dialogue_set$points$MR1 ~ ona_dialogue_set$points$comparison) %>% summary()
+ona_dialogue_mr$r.squared
 ```
 ## 3) Interpretive Alignment
 ```{r}
-source("~/Desktop/epistemic_analytics/Monash_collab/code/ona_plotter_monash.R")
+source("code/ona_plotter_monash.R")
 # Plot ONA plots
 make.ona.plot(ona_location_set, 
-              "Monash Location Model")
-make.ona.plot(ona_dialogue_set, 
+              "Monash Location Model", 
+              flip_x = TRUE)
+make.ona.plot(ona_dialogue_set,
               "Monash Dialogue Model")
 ```
 
+```{r}
+library(effsize)
+cohen.d(ona_location_set$points$comparison$low$MR1, ona_location_set$points$comparison$high$MR1)
+cohen.d(ona_dialogue_set$points$comparison$low$MR1, ona_dialogue_set$points$comparison$high$MR1)
+
+```
 
 
+```{r}
+colSums(ona_dialogue_set$line.weights$comparison$low)
+```
+
+
+```{r}
+colSums(ona_dialogue_set$line.weights$comparison$high)
+```
+
+
+```{r}
+colSums(ona_dialogue_set$line.weights)
+```
 
 

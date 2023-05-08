@@ -20,6 +20,8 @@ knitr::opts_knit$set(root.dir = '~/Documents/GitHub/Monash_collab')
 # Reinstallation sequence for ONA package
 # remove.packages("ona")
 # install.packages("ona", repos = c("https://epistemic-analytics.gitlab.io/qe-packages/ona/cran/", "https://cran.rstudio.org"))
+# remove.packages("tma")
+# install.packages("tma", repos = c("https://epistemic-analytics.gitlab.io/qe-packages/tma/cran/", "https://cran.rstudio.org"))
 
 # Load necessary libraries 
 library(rENA)
@@ -32,20 +34,39 @@ library(tidyverse)
 ```
 
 # 1. Read in and process dataset
+```{r}
+# df <- read_excel("data/merged_A_15_individual_7codes_1s.xlsx") %>% as.data.frame()
+# names(df) <- gsub(" ", "_", tolower(names(df)))
+# df['comparison'][df['comparison'] == 0] <- "low"
+# df['comparison'][df['comparison'] == 1] <- "high"
+# colnames(df)[which(names(df) == "cp")] <- "collaborate_primary"
+# colnames(df)[which(names(df) == "ip")] <- "independent_primary"
+# colnames(df)[which(names(df) == "cs")] <- "collaborate_secondary"
+# colnames(df)[which(names(df) == "is")] <- "independent_secondary"
+# colnames(df)[which(names(df) == "td")] <- "task_distribution"
+# colnames(df)[which(names(df) == "tt")] <- "task_transition"
+# 
+# df <- df[, -c(1)]
+# write.csv(df, "data/with_comparison.csv", row.names = FALSE)
+# View(df)
+```
+
 ```{r, message = FALSE}
-df <- read_excel("~/Desktop/epistemic_analytics/Monash_collab/data/merged_A_15_individual_7codes_1s.xlsx")
+
+df <- read_csv("data/with_comparison.csv") %>% as.data.frame()
+# df
 ```
 
 # 2. Specify parameters: Units, codes, metadata, and Horizon-of-observation rules
 ```{r}
 # Specify unit columns 
-unit_cols <- c("session_id", "initiator") 
+unit_cols <- c("session_id", "initiator", "comparison") 
 
 # Cumulative code columns. Can split these up into location-based and utterance-based. Will be differently grouped after encoding modalities
-code_cols <- c("CP", "CS", "IP", "IS", "TD", "TT", "task allo and plann", "provision of handover information", "responding to request", "agreement", "comparison")
+code_cols <- c("collaborate_primary", "independent_primary", "collaborate_secondary", "independent_secondary", "task_distribution", "task_transition", "provision_of_handover_information","info_sharing_and_situ_assess", "escalation", "information_requesting", "responding_to_request", "agreement")
 
 # Store metadata (duration will  leave this later once we compare active and continuing impacts) 
-meta_cols <- c("..1", "Unamed: 0", "utterance_id", "conversation_id", "text", "duration", "receiver", "location", "priority", "communication_type", "stage_based_on_num_of_student", "stage_based_on_scenario")
+meta_cols <- c("session_id", "initiator", "comparison", "utterance_id", "conversation_id", "text", "duration", "receiver", "location", "priority", "communication_type", "stage_based_on_num_of_student", "stage_based_on_scenario")
   
 # Establish HOO rules. Units are making connections only in their respective sessions 
 HOO_rules_model <-  tma:::rules(
@@ -85,8 +106,27 @@ ona_multimodal_tif_accum <- tma:::accumulate_contexts (
     return.ena.set = FALSE,
     mode.column = "modality"
 ) 
+my_rotation.params <-
+  list(low_perf=ona_multimodal_tif_accum$meta.data$comparison == "low",
+       high_perf=ona_multimodal_tif_accum$meta.data$comparison == "high")
+
 # Make ONA set
-ona_multimodal_tif_set <- model(ona_multimodal_tif_accum)
+ona_multimodal_tif_set <-
+  model(ona_multimodal_tif_accum,                                 # The previously run accumulation above
+        rotate.using ="mean",                  # Function provided by ONA
+        rotation.params = my_rotation.params   # The defined paremeters for rotation
+        )
+# set <- ona_multimodal_tif_set
+```
+```{r}
+# sum(as.matrix(ona_multimodal_tif_accum$connection.counts)[,"agreement & responding_to_request"])
+# sum(as.matrix(ona_multimodal_tif_accum$connection.counts)[,"responding_to_request & agreement"])
+# 
+# sum(as.matrix(ona_multimodal_tif_set$connection.counts)[,"agreement & responding_to_request"])
+# sum(as.matrix(ona_multimodal_tif_set$connection.counts)[,"responding_to_request & agreement"])
+# 
+# sum(as.matrix(ona_multimodal_tif_set$line.weights)[,"agreement & responding_to_request"])
+# sum(as.matrix(ona_multimodal_tif_set$line.weights)[,"responding_to_request & agreement"])
 ```
 
 
@@ -98,18 +138,24 @@ ona_multimodal_tif_gof <- ona:::correlations(ona_multimodal_tif_set)$pearson
 ona_multimodal_tif_gof[[1]]
 ```
 ## 2) Variance explained
-SVD1
 ```{r}
-# Variance explained by SVD1 pertaining to each session ID
-ona_multimodal_tif_svd1 <- lm(ona_multimodal_tif_set$points$SVD1 ~ ona_multimodal_tif_set$points$session_id) %>% summary()
-ona_multimodal_tif_svd1$r.squared
+ona_multimodal_tif_MR <- lm(ona_multimodal_tif_set$points$MR1 ~ ona_multimodal_tif_set$points$comparison) %>% summary()
+ona_multimodal_tif_MR$r.squared
 ```
 ## 3) Interpretive Alignment
 ```{r}
-source("~/Desktop/epistemic_analytics/Monash_collab/code/ona_plotter_monash.R")
+source("code/ona_plotter_monash.R")
 # Plot ONA plot
 make.ona.plot(ona_multimodal_tif_set, 
-              "Monash Multimodal Model")
+              "Monash Multimodal Model", 
+              flip_x = TRUE)
 ```
+
+```{r}
+library(effsize)
+cohen.d(ona_multimodal_tif_set$points$comparison$low$MR1, ona_multimodal_tif_set$points$comparison$high$MR1)
+```
+
+
 
 
