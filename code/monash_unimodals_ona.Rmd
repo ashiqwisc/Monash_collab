@@ -34,11 +34,12 @@ library(tidyverse)
 
 # 1. Read in and process dataset
 ```{r, message = FALSE}
-df_location <- read.csv("data/with_comparison.csv") %>%
+# Note: Using updated version from monash_ona_tma.Rmd, after two new location codes were added
+df_location <- read.csv("~/Desktop/epistemic_analytics/Monash_collab/data/with_comparison.csv") %>%
   filter(modality == "location") %>%
   as.data.frame()
 
-df_dialogue <- read.csv("data/with_comparison.csv") %>%
+df_dialogue <- read.csv("~/Desktop/epistemic_analytics/Monash_collab/data/with_comparison.csv") %>%
   filter(modality == "dialogue") %>%
   as.data.frame()
 ```
@@ -49,7 +50,8 @@ df_dialogue <- read.csv("data/with_comparison.csv") %>%
 unit_cols <- c("session_id", "initiator", "comparison") 
 
 # Cumulative code columns. Can split these up into location-based and utterance-based. Will be differently grouped after encoding modalities
-location_code_cols <- c("collaborate_primary", "independent_primary", "collaborate_secondary", "independent_secondary", "task_distribution", "task_transition")
+# Note: This uses ID and CD. I don't know what they stand for
+location_code_cols <- c("collaborate_primary", "independent_primary", "collaborate_secondary", "independent_secondary", "task_distribution", "task_transition", "ID", "CD")
 
 dialogue_code_cols <- c("task_allo_and_plann", "provision_of_handover_information","info_sharing_and_situ_assess", "escalation", "information_requesting", "responding_to_request", "agreement")
 
@@ -58,7 +60,7 @@ meta_cols <- c("session_id", "initiator", "comparison", "utterance_id", "convers
   
 # Establish HOO rules. Units are making connections only in their respective sessions 
 HOO_rules_model <-  tma:::rules(
-    session_id %in% UNIT$session_id 
+    session_id %in% UNIT$session_id & conversation_id %in% UNIT$conversation_id
 )
 context_model_location <- tma:::contexts(
   x = df_location,
@@ -147,7 +149,7 @@ ona_dialogue_mr$r.squared
 ```
 ## 3) Interpretive Alignment
 ```{r}
-source("code/ona_plotter_monash.R")
+source("~/Desktop/epistemic_analytics/Monash_collab/code/ona_plotter_monash.R")
 # Plot ONA plots
 make.ona.plot(ona_location_set, 
               "Monash Location Model", 

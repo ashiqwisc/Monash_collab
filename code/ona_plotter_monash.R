@@ -38,7 +38,6 @@ make.ona.plot <- function(set,
       show_mean = TRUE, show_points = TRUE, with_ci = TRUE)
   print(high_perf)
   
-  # FirstGame and SecondGame subtracted plot
   sub <- plot(set, title = "Difference: low performance (red) vs high performance (blue)") %>%
     units(
       points = set$points$comparison$low, 
@@ -55,7 +54,7 @@ make.ona.plot <- function(set,
       # node_position_multiplier = node_position_multiplier,
       edge_color = c("red","blue")) %>%
     nodes(
-      node_size_multiplier = 2,
+      node_size_multiplier = 1,
       # node_position_multiplier = node_position_multiplier,
       self_connection_color = c("red","blue"))
   print(sub)
