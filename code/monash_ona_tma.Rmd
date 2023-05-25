@@ -47,9 +47,8 @@ library(tidyverse)
 # colnames(df)[which(names(df) == "is")] <- "independent_secondary"
 # colnames(df)[which(names(df) == "td")] <- "task_distribution"
 # colnames(df)[which(names(df) == "tt")] <- "task_transition"
-# # Two new codes, not sure what they stand for
-# colnames(df)[which(names(df) == "id")] <- "ID"
-# colnames(df)[which(names(df) == "cd")] <- "CD"
+# colnames(df)[which(names(df) == "id")] <- "independent_distraction"
+# colnames(df)[which(names(df) == "cd")] <- "collaboration_on_distraction"
 # 
 # df <- df[, -c(1)]
 # write.csv(df, "~/Desktop/epistemic_analytics/Monash_collab/data/with_comparison.csv", row.names = FALSE)
@@ -68,7 +67,7 @@ df <- read_csv("~/Desktop/epistemic_analytics/Monash_collab/data/with_comparison
 unit_cols <- c("session_id", "initiator", "comparison") 
 
 # Cumulative code columns. Can split these up into location-based and utterance-based. Will be differently grouped after encoding modalities
-code_cols <- c("collaborate_primary", "independent_primary", "collaborate_secondary", "independent_secondary", "task_distribution", "task_transition", "ID", "CD", "task_allo_and_plann", "provision_of_handover_information","info_sharing_and_situ_assess", "escalation", "information_requesting", "responding_to_request", "agreement")
+code_cols <- c("collaborate_primary", "independent_primary", "collaborate_secondary", "independent_secondary", "task_distribution", "task_transition", "independent_distraction", "collaboration_on_distraction", "task_allo_and_plann", "provision_of_handover_information","info_sharing_and_situ_assess", "escalation", "information_requesting", "responding_to_request", "agreement")
 
 # Store metadata (duration will  leave this later once we compare active and continuing impacts) 
 meta_cols <- c("session_id", "initiator", "comparison", "utterance_id", "conversation_id", "text", "duration", "receiver", "location", "priority", "communication_type", "stage_based_on_num_of_student", "stage_based_on_scenario")

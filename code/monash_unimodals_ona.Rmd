@@ -51,7 +51,7 @@ unit_cols <- c("session_id", "initiator", "comparison")
 
 # Cumulative code columns. Can split these up into location-based and utterance-based. Will be differently grouped after encoding modalities
 # Note: This uses ID and CD. I don't know what they stand for
-location_code_cols <- c("collaborate_primary", "independent_primary", "collaborate_secondary", "independent_secondary", "task_distribution", "task_transition", "ID", "CD")
+location_code_cols <- c("collaborate_primary", "independent_primary", "collaborate_secondary", "independent_secondary", "task_distribution", "task_transition", "independent_distraction", "collaboration_on_distraction")
 
 dialogue_code_cols <- c("task_allo_and_plann", "provision_of_handover_information","info_sharing_and_situ_assess", "escalation", "information_requesting", "responding_to_request", "agreement")
 
