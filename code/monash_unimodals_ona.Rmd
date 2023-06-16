@@ -35,11 +35,11 @@ library(tidyverse)
 # 1. Read in and process dataset
 ```{r, message = FALSE}
 # Note: Using updated version from monash_ona_tma.Rmd, after two new location codes were added
-df_location <- read.csv("~/Desktop/epistemic_analytics/Monash_collab/data/with_comparison.csv") %>%
+df_location <- read.csv("~/Desktop/epistemic_analytics/Monash_collab/data/with_phases.csv") %>%
   filter(modality == "location") %>%
   as.data.frame()
 
-df_dialogue <- read.csv("~/Desktop/epistemic_analytics/Monash_collab/data/with_comparison.csv") %>%
+df_dialogue <- read.csv("~/Desktop/epistemic_analytics/Monash_collab/data/with_phases.csv") %>%
   filter(modality == "dialogue") %>%
   as.data.frame()
 ```
@@ -47,10 +47,9 @@ df_dialogue <- read.csv("~/Desktop/epistemic_analytics/Monash_collab/data/with_c
 # 2. Specify parameters: Units, codes, metadata, and Horizon-of-observation rules
 ```{r}
 # Specify unit columns 
-unit_cols <- c("session_id", "initiator", "comparison") 
+unit_cols <- c("session_id", "phase", "initiator", "comparison") 
 
 # Cumulative code columns. Can split these up into location-based and utterance-based. Will be differently grouped after encoding modalities
-# Note: This uses ID and CD. I don't know what they stand for
 location_code_cols <- c("collaborate_primary", "independent_primary", "collaborate_secondary", "independent_secondary", "task_distribution", "task_transition", "independent_distraction", "collaboration_on_distraction")
 
 dialogue_code_cols <- c("task_allo_and_plann", "provision_of_handover_information","info_sharing_and_situ_assess", "escalation", "information_requesting", "responding_to_request", "agreement")
@@ -60,7 +59,7 @@ meta_cols <- c("session_id", "initiator", "comparison", "utterance_id", "convers
   
 # Establish HOO rules. Units are making connections only in their respective sessions 
 HOO_rules_model <-  tma:::rules(
-    session_id %in% UNIT$session_id & conversation_id %in% UNIT$conversation_id
+    session_id %in% UNIT$session_id & phase %in% UNIT$phase & conversation_id %in% UNIT$conversation_id
 )
 context_model_location <- tma:::contexts(
   x = df_location,
@@ -72,15 +71,10 @@ context_model_dialogue <- tma:::contexts(
   units = unit_cols,
   hoo_rules = HOO_rules_model
 )
-
-my_rotation.params <-
-  list(low_perf=ona_multimodal_tif_accum$meta.data$comparison == "low",
-       high_perf=ona_multimodal_tif_accum$meta.data$comparison == "high")
 ```
 
 # 2. Accumulate 
 ```{r}
-# Accumulate by passing along the subset dataframes. Specifying  an arbitrary moving stanza window of 7
 accum_location <- tma:::accumulate_contexts (
     x = context_model_location,
     codes = location_code_cols,
@@ -103,22 +97,29 @@ accum_dialogue <- tma:::accumulate_contexts (
     time.column = "start_time", 
     return.ena.set = FALSE
 ) 
+
+my_location_rotation.params <-
+  list(low_perf=accum_location$meta.data$comparison == "low",
+       high_perf=accum_location$meta.data$comparison == "high")
+
+my_dialogue_rotation.params <-
+  list(low_perf=accum_dialogue$meta.data$comparison == "low",
+       high_perf=accum_dialogue$meta.data$comparison == "high")
 ```
 
 # 3. Generate the ONA Set
 
 ## 3.1 Perform MR 
 ```{r}
-## Not performing means rotation, there aren't two discrete groups involved in the respective accumulations
 ona_location_set <-
   model(accum_location,                                 # The previously run accumulation above
         rotate.using ="mean",                  # Function provided by ONA
-        rotation.params = my_rotation.params   # The defined paremeters for rotation
+        rotation.params = my_location_rotation.params   # The defined paremeters for rotation
         )
 ona_dialogue_set <-
   model(accum_dialogue,                                 # The previously run accumulation above
         rotate.using ="mean",                  # Function provided by ONA
-        rotation.params = my_rotation.params   # The defined paremeters for rotation
+        rotation.params = my_dialogue_rotation.params   # The defined paremeters for rotation
         )
 # ona_location_set <-
 #   model(accum_location
@@ -141,7 +142,7 @@ ona_dialogue_gof[[1]]
 ## 2) Variance explained
 SVD1
 ```{r}
-# Variance explained by SVD1 pertaining to each session ID
+# Variance explained by MR1 
 ona_location_mr <- lm(ona_location_set$points$MR1 ~ ona_location_set$points$comparison) %>% summary()
 ona_location_mr$r.squared
 ona_dialogue_mr <- lm(ona_dialogue_set$points$MR1 ~ ona_dialogue_set$points$comparison) %>% summary()

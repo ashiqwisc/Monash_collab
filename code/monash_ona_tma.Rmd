@@ -37,34 +37,34 @@ library(tidyverse)
 # 1. Read in and process dataset
 ```{r}
 # Note: Reran this for new dataset
-# df <- read_excel("~/Desktop/epistemic_analytics/Monash_collab/data/merged_A_15_7_8_codes_with_conversation_id.xlsx") %>% as.data.frame()
-# names(df) <- gsub(" ", "_", tolower(names(df)))
-# df['comparison'][df['comparison'] == 0] <- "low"
-# df['comparison'][df['comparison'] == 1] <- "high"
-# colnames(df)[which(names(df) == "cp")] <- "collaborate_primary"
-# colnames(df)[which(names(df) == "ip")] <- "independent_primary"
-# colnames(df)[which(names(df) == "cs")] <- "collaborate_secondary"
-# colnames(df)[which(names(df) == "is")] <- "independent_secondary"
-# colnames(df)[which(names(df) == "td")] <- "task_distribution"
-# colnames(df)[which(names(df) == "tt")] <- "task_transition"
-# colnames(df)[which(names(df) == "id")] <- "independent_distraction"
-# colnames(df)[which(names(df) == "cd")] <- "collaboration_on_distraction"
-# 
-# df <- df[, -c(1)]
-# write.csv(df, "~/Desktop/epistemic_analytics/Monash_collab/data/with_comparison.csv", row.names = FALSE)
-# View(df)
+df <- read_excel("~/Desktop/epistemic_analytics/Monash_collab/data/merged_A_15_added_phases.xlsx") %>% as.data.frame()
+names(df) <- gsub(" ", "_", tolower(names(df)))
+df['comparison'][df['comparison'] == 0] <- "low"
+df['comparison'][df['comparison'] == 1] <- "high"
+colnames(df)[which(names(df) == "cp")] <- "collaborate_primary"
+colnames(df)[which(names(df) == "ip")] <- "independent_primary"
+colnames(df)[which(names(df) == "cs")] <- "collaborate_secondary"
+colnames(df)[which(names(df) == "is")] <- "independent_secondary"
+colnames(df)[which(names(df) == "td")] <- "task_distribution"
+colnames(df)[which(names(df) == "tt")] <- "task_transition"
+colnames(df)[which(names(df) == "id")] <- "independent_distraction"
+colnames(df)[which(names(df) == "cd")] <- "collaboration_on_distraction"
+
+df <- df[, -c(1)]
+write.csv(df, "~/Desktop/epistemic_analytics/Monash_collab/data/with_phases.csv", row.names = FALSE)
+View(df)
 ```
 
 ```{r, message = FALSE}
 
-df <- read_csv("~/Desktop/epistemic_analytics/Monash_collab/data/with_comparison.csv") %>% as.data.frame()
+df <- read_csv("~/Desktop/epistemic_analytics/Monash_collab/data/with_phases.csv") %>% as.data.frame()
 # df
 ```
 
 # 2. Specify parameters: Units, codes, metadata, and Horizon-of-observation rules
 ```{r}
 # Specify unit columns 
-unit_cols <- c("session_id", "initiator", "comparison") 
+unit_cols <- c("session_id", "phase", "initiator", "comparison") 
 
 # Cumulative code columns. Can split these up into location-based and utterance-based. Will be differently grouped after encoding modalities
 code_cols <- c("collaborate_primary", "independent_primary", "collaborate_secondary", "independent_secondary", "task_distribution", "task_transition", "independent_distraction", "collaboration_on_distraction", "task_allo_and_plann", "provision_of_handover_information","info_sharing_and_situ_assess", "escalation", "information_requesting", "responding_to_request", "agreement")
@@ -74,7 +74,7 @@ meta_cols <- c("session_id", "initiator", "comparison", "utterance_id", "convers
   
 # Establish HOO rules. Units are making connections only in their respective sessions and conversations
 HOO_rules_model <-  tma:::rules(
-    session_id %in% UNIT$session_id & conversation_id %in% UNIT$conversation_id
+    session_id %in% UNIT$session_id & phase %in% UNIT$phase & conversation_id %in% UNIT$conversation_id
 )
 ```
 
