@@ -155,10 +155,27 @@ make.ona.plot(ona_multimodal_tif_set,
               "Monash Multimodal Model", 
               flip_x = TRUE)
 ```
+# Statistics
 
 ```{r}
-library(effsize)
-cohen.d(ona_multimodal_tif_set$points$comparison$low$MR1, ona_multimodal_tif_set$points$comparison$high$MR1)
+library(effectsize)
+# To be consistent with the unimodals, let's use nonparametric stuff 
+
+# Phase 2
+m_phase_2_wilcox_test <- wilcox.test(as.data.frame(ona_multimodal_tif_set$points[ona_multimodal_tif_set$points$comparison == "low" & ona_multimodal_tif_set$points$phase == "phase 2",])$MR1, as.data.frame(ona_multimodal_tif_set$points[ona_multimodal_tif_set$points$comparison == "high" & ona_multimodal_tif_set$points$phase == "phase 2",])$MR1)
+m_phase_2_wilcox_test
+
+m_phase_2_eff_size <- rank_biserial(as.data.frame(ona_multimodal_tif_set$points[ona_multimodal_tif_set$points$comparison == "low" & ona_multimodal_tif_set$points$phase == "phase 2",])$MR1, as.data.frame(ona_multimodal_tif_set$points[ona_multimodal_tif_set$points$comparison == "high" & ona_multimodal_tif_set$points$phase == "phase 2",])$MR1)
+m_phase_2_eff_size
+
+# Phase 3
+
+m_phase_3_wilcox_test <- wilcox.test(as.data.frame(ona_multimodal_tif_set$points[ona_multimodal_tif_set$points$comparison == "low" & ona_multimodal_tif_set$points$phase == "phase 3",])$MR1, as.data.frame(ona_multimodal_tif_set$points[ona_multimodal_tif_set$points$comparison == "high" & ona_multimodal_tif_set$points$phase == "phase 3",])$MR1)
+m_phase_3_wilcox_test
+
+m_phase_3_eff_size <- rank_biserial(as.data.frame(ona_multimodal_tif_set$points[ona_multimodal_tif_set$points$comparison == "low" & ona_multimodal_tif_set$points$phase == "phase 3",])$MR1, as.data.frame(ona_multimodal_tif_set$points[ona_multimodal_tif_set$points$comparison == "high" & ona_multimodal_tif_set$points$phase == "phase 3",])$MR1)
+m_phase__eff_size
+
 ```
 
 

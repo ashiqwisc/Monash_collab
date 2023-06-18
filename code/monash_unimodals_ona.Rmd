@@ -37,10 +37,12 @@ library(tidyverse)
 # Note: Using updated version from monash_ona_tma.Rmd, after two new location codes were added
 df_location <- read.csv("~/Desktop/epistemic_analytics/Monash_collab/data/with_phases.csv") %>%
   filter(modality == "location") %>%
+  filter(phase != "phase 1" & phase != "phase 4") %>%
   as.data.frame()
 
 df_dialogue <- read.csv("~/Desktop/epistemic_analytics/Monash_collab/data/with_phases.csv") %>%
   filter(modality == "dialogue") %>%
+  filter(phase != "phase 1" & phase != "phase 4") %>%
   as.data.frame()
 ```
 
@@ -151,22 +153,64 @@ ona_dialogue_mr$r.squared
 ## 3) Interpretive Alignment
 ```{r}
 source("~/Desktop/epistemic_analytics/Monash_collab/code/ona_plotter_monash.R")
+
+
 # Plot ONA plots
 make.ona.plot(ona_location_set, 
               "Monash Location Model", 
               flip_x = TRUE)
+
+#'*Why no flip_x = TRUE here?*
 make.ona.plot(ona_dialogue_set,
               "Monash Dialogue Model")
+
 ```
 
+# Statistics 
 ```{r}
-library(effsize)
-cohen.d(ona_location_set$points$comparison$low$MR1, ona_location_set$points$comparison$high$MR1)
-cohen.d(ona_dialogue_set$points$comparison$low$MR1, ona_dialogue_set$points$comparison$high$MR1)
+# Verify assumptions of normality
+# shapiro.test((ona_dialogue_set$points[ona_dialogue_set$points$comparison == "low" & ona_dialogue_set$points$phase == "phase 2",])$MR1)
+# shapiro.test((ona_dialogue_set$points[ona_dialogue_set$points$comparison == "high" & ona_dialogue_set$points$phase == "phase 2",])$MR1)
+# shapiro.test((ona_dialogue_set$points[ona_dialogue_set$points$comparison == "low" & ona_dialogue_set$points$phase == "phase 3",])$MR1)
+# shapiro.test((ona_dialogue_set$points[ona_dialogue_set$points$comparison == "high" & ona_dialogue_set$points$phase == "phase 3",])$MR1)
+
+# Shapiro-Wilk test passes for everyone but low phase3. To be consistent throughout, let's just use Mann-Whitney U-Test (Wilcoxon ranked sum) for hypothesis testing andthe rank-biserial coefficient for effect size
+
+library(effectsize)
+# Phase 2: Dialogue 
+phase_2_dia_wilcox_test <- wilcox.test(as.data.frame(ona_dialogue_set$points[ona_dialogue_set$points$comparison == "low" & ona_dialogue_set$points$phase == "phase 2",])$MR1, as.data.frame(ona_dialogue_set$points[ona_dialogue_set$points$comparison == "high" & ona_dialogue_set$points$phase == "phase 2",])$MR1)
+phase_2_dia_wilcox_test
+
+phase_2_dia_eff_size <- rank_biserial(as.data.frame(ona_dialogue_set$points[ona_dialogue_set$points$comparison == "low" & ona_dialogue_set$points$phase == "phase 2",])$MR1, as.data.frame(ona_dialogue_set$points[ona_dialogue_set$points$comparison == "high" & ona_dialogue_set$points$phase == "phase 2",])$MR1)
+phase_2_dia_eff_size
+
+# Phase 2: Location 
+phase_2_loc_wilcox_test <- wilcox.test(as.data.frame(ona_location_set$points[ona_location_set$points$comparison == "low" & ona_location_set$points$phase == "phase 2",])$MR1, as.data.frame(ona_location_set$points[ona_location_set$points$comparison == "high" & ona_location_set$points$phase == "phase 2",])$MR1)
+phase_2_loc_wilcox_test
+
+phase_2_loc_eff_size <- rank_biserial(as.data.frame(ona_location_set$points[ona_location_set$points$comparison == "low" & ona_location_set$points$phase == "phase 2",])$MR1, as.data.frame(ona_location_set$points[ona_location_set$points$comparison == "high" & ona_location_set$points$phase == "phase 2",])$MR1)
+phase_2_loc_eff_size
+
+
+# Phase 3: Dialogue 
+phase_3_dia_wilcox_test <- wilcox.test(as.data.frame(ona_dialogue_set$points[ona_dialogue_set$points$comparison == "low" & ona_dialogue_set$points$phase == "phase 3",])$MR1, as.data.frame(ona_dialogue_set$points[ona_dialogue_set$points$comparison == "high" & ona_dialogue_set$points$phase == "phase 3",])$MR1)
+phase_3_dia_wilcox_test
+
+phase_3_dia_eff_size <- rank_biserial(as.data.frame(ona_dialogue_set$points[ona_dialogue_set$points$comparison == "low" & ona_dialogue_set$points$phase == "phase 3",])$MR1, as.data.frame(ona_dialogue_set$points[ona_dialogue_set$points$comparison == "high" & ona_dialogue_set$points$phase == "phase 3",])$MR1)
+phase_3_dia_eff_size
+
+# Phase 3: Location 
+phase_3_loc_wilcox_test <- wilcox.test(as.data.frame(ona_location_set$points[ona_location_set$points$comparison == "low" & ona_location_set$points$phase == "phase 3",])$MR1, as.data.frame(ona_location_set$points[ona_location_set$points$comparison == "high" & ona_location_set$points$phase == "phase 3",])$MR1)
+phase_3_loc_wilcox_test
+
+phase_3_loc_eff_size <- rank_biserial(as.data.frame(ona_location_set$points[ona_location_set$points$comparison == "low" & ona_location_set$points$phase == "phase 3",])$MR1, as.data.frame(ona_location_set$points[ona_location_set$points$comparison == "high" & ona_location_set$points$phase == "phase 3",])$MR1)
+phase_3_loc_eff_size
+
 
 ```
 
 
+# What is this for? 
 ```{r}
 colSums(ona_dialogue_set$line.weights$comparison$low)
 ```
